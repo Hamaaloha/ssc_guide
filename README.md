@@ -1,4 +1,3 @@
-# ssc_guide
 # CMJ 個票の見方ガイド
 
 Counter Movement Jump — 個票インタラクティブ解説アプリ
