@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMJ個票の見方ガイド</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    background: #f0f4f8;
+    color: #1a2035;
+    min-height: 100vh;
+  }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    background: linear-gradient(135deg, #0d2137 0%, #1a4a6b 100%);
+    color: white;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .app-header h1 { font-size: 1.4rem; font-weight: 700; }
+  .app-header p { font-size: 0.85rem; opacity: 0.8; margin-top: 4px; }
+
+  /* ===== LAYOUT ===== */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 700px) {
+    .container { grid-template-columns: 1fr; }
+  }
+
+  /* ===== 個票プレビュー ===== */
+  .票-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+
+  .票-header {
+    background: #0d2137;
+    color: white;
+    text-align: center;
+    padding: 14px 12px 10px;
+  }
+  .票-header .big { font-size: 1.3rem; font-weight: 800; letter-spacing: 0.03em; }
+  .票-header .sub { color: #4dd0e1; font-size: 0.8rem; margin-top: 2px; }
+  .票-header .small { font-size: 0.7rem; opacity: 0.75; margin-top: 2px; }
+
+  .票-name-row {
+    background: #1a4a6b;
+    color: white;
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+  .票-name-row .name { font-weight: 700; font-size: 1rem; }
+
+  /* 数値エリア */
+  .票-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 3px solid #e0e7ef;
+  }
+  .metric-cell {
+    padding: 14px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 2px solid transparent;
+    border-radius: 0;
+    position: relative;
+  }
+  .metric-cell:first-child { border-right: 1px solid #e0e7ef; }
+  .metric-cell:hover { background: #e8f4fd; }
+  .metric-cell.active { background: #dbeffe; border-color: #2196f3; }
+  .metric-cell .label { font-size: 0.68rem; color: #2196f3; font-weight: 600; }
+  .metric-cell .unit { font-size: 0.75rem; color: #555; }
+  .metric-cell .value { font-size: 2.2rem; font-weight: 800; color: #0d9de8; line-height: 1.1; }
+  .metric-cell .avg-label { font-size: 0.65rem; color: #888; margin-top: 8px; }
+  .metric-cell .avg-val { font-size: 0.85rem; font-weight: 600; color: #444; }
+
+  /* 評価バー */
+  .票-badges {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    background: #1a2035;
+  }
+  .badge-cell {
+    padding: 10px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 2px solid transparent;
+  }
+  .badge-cell:not(:last-child) { border-right: 1px solid #2d3a50; }
+  .badge-cell:hover { background: #2d3a50; }
+  .badge-cell.active { border-color: #4dd0e1; background: #1e3a52; }
+  .badge-cell .b-label { font-size: 0.65rem; color: #aaa; }
+  .badge-cell .b-val { font-size: 1rem; font-weight: 800; color: white; margin-top: 2px; }
+  .badge-cell.rank .b-val { color: #fff; }
+  .badge-cell.eval .b-val { color: #ef5350; }
+  .badge-cell.hensa .b-val { color: #bbb; }
+
+  /* グラフエリア */
+  .票-chart {
+    padding: 14px 12px 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 2px solid transparent;
+    border-radius: 0;
+  }
+  .票-chart:hover { background: #f5faff; }
+  .票-chart.active { border-color: #2196f3; background: #eaf4ff; }
+  .chart-title { font-size: 0.7rem; color: #888; margin-bottom: 8px; }
+  .chart-canvas-wrapper {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    height: 140px;
+    position: relative;
+  }
+  /* 簡易SVGグラフ */
+  .chart-canvas-wrapper svg { width: 100%; height: 100%; }
+
+  /* 解説エリア ===== */
+  .explain-panel {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .explain-intro {
+    padding: 20px;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    border-bottom: 1px solid #eee;
+  }
+  .explain-intro strong { color: #1a4a6b; }
+
+  .explain-content {
+    padding: 20px;
+    flex: 1;
+  }
+  .explain-content.hidden { display: none; }
+
+  .explain-tag {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1565c0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+  }
+  .explain-content h2 {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #0d2137;
+    margin-bottom: 10px;
+  }
+  .explain-content .big-num {
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: #0d9de8;
+    line-height: 1;
+    margin: 8px 0;
+  }
+  .explain-content .big-num span { font-size: 1rem; font-weight: 400; color: #888; }
+  .explain-content p {
+    font-size: 0.88rem;
+    line-height: 1.75;
+    color: #444;
+    margin-bottom: 10px;
+  }
+  .explain-content ul {
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: #444;
+    padding-left: 18px;
+    margin-bottom: 10px;
+  }
+  .explain-content .tip {
+    background: #fff8e1;
+    border-left: 4px solid #ffc107;
+    padding: 10px 14px;
+    font-size: 0.83rem;
+    color: #5d4037;
+    border-radius: 0 6px 6px 0;
+    margin-top: 12px;
+    line-height: 1.65;
+  }
+  .explain-content .tip strong { color: #e65100; }
+
+  /* 評価グレード表 */
+  .grade-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.83rem; }
+  .grade-table th { background: #1a2035; color: white; padding: 7px 10px; text-align: center; }
+  .grade-table td { padding: 7px 10px; text-align: center; border-bottom: 1px solid #eee; }
+  .grade-5 { background: #1b5e20; color: white; font-weight: 700; }
+  .grade-4 { background: #0277bd; color: white; font-weight: 700; }
+  .grade-3 { background: #558b2f; color: white; font-weight: 700; }
+  .grade-2 { background: #e65100; color: white; font-weight: 700; }
+  .grade-1 { background: #b71c1c; color: white; font-weight: 700; }
+
+  /* 矢印ヒント */
+  .hint-bar {
+    background: #e3f2fd;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: #1565c0;
+    font-weight: 600;
+  }
+
+  /* 解説2ページ目ボタン */
+  .page2-btn-wrap {
+    text-align: center;
+    padding: 8px 16px 4px;
+  }
+  .page2-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, #0a1f35, #0d2f50);
+    color: white;
+    border: 1px solid rgba(77,208,225,0.35);
+    border-radius: 40px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+  .page2-btn:hover {
+    background: linear-gradient(135deg, #0d2f50, #1a4a6b);
+    border-color: rgba(77,208,225,0.7);
+    box-shadow: 0 6px 28px rgba(0,160,220,0.25);
+    transform: translateY(-1px);
+  }
+  .page2-btn .btn-arrow {
+    display: inline-block;
+    transition: transform 0.25s;
+    font-size: 0.8rem;
+    opacity: 0.7;
+  }
+  .page2-btn.open .btn-arrow { transform: rotate(180deg); }
+
+  /* ===== 2ページ目パネル（スタイリッシュ版） ===== */
+  .page2-panel {
+    grid-column: 1 / -1;
+    display: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+  }
+  .page2-panel.open {
+    display: block;
+    animation: slideDown 0.4s cubic-bezier(0.22,1,0.36,1);
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ヒーローバナー */
+  .p2-hero {
+    position: relative;
+    background: linear-gradient(135deg, #050d1a 0%, #0a1f35 40%, #0d2f50 100%);
+    padding: 48px 40px 40px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .p2-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 50%, rgba(0,180,255,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 80% 30%, rgba(0,255,200,0.06) 0%, transparent 70%);
+  }
+  .p2-hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .p2-hero-eyebrow {
+    position: relative;
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #4dd0e1;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding: 4px 14px;
+    border: 1px solid rgba(77,208,225,0.4);
+    border-radius: 20px;
+  }
+  .p2-hero h2 {
+    position: relative;
+    font-size: 2rem;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .p2-hero h2 em {
+    font-style: normal;
+    background: linear-gradient(90deg, #4dd0e1, #00e5ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .p2-hero p {
+    position: relative;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.88rem;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* セクション全体 */
+  .p2-sections {
+    background: #080f1c;
+    padding: 0 0 48px;
+  }
+
+  /* セクション区切り */
+  .p2-section {
+    padding: 40px 40px 0;
+  }
+  .p2-section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .p2-section-label .s-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .p2-section-label .s-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #4dd0e1;
+  }
+  .p2-section-label .s-heading {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: white;
+    margin-top: 1px;
+  }
+  .s-divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(77,208,225,0.4) 0%, transparent 100%);
+    margin-bottom: 24px;
+  }
+
+  /* CMJとは？カード */
+  .p2-what-card {
+    background: linear-gradient(135deg, rgba(13,33,55,0.9), rgba(10,25,42,0.95));
+    border: 1px solid rgba(77,208,225,0.15);
+    border-radius: 14px;
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 24px;
+    align-items: center;
+  }
+  @media (max-width: 600px) { .p2-what-card { grid-template-columns: 1fr; } }
+  .p2-what-icon {
+    font-size: 3.5rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 12px rgba(0,200,255,0.4));
+  }
+  .p2-what-card p {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.9rem;
+    line-height: 1.85;
+  }
+  .p2-what-card strong { color: #4dd0e1; }
+
+  /* 能力指標 横並びピル */
+  .p2-ability-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .p2-ability-pill {
+    background: rgba(0,180,255,0.08);
+    border: 1px solid rgba(0,180,255,0.2);
+    border-radius: 30px;
+    padding: 10px 18px;
+    color: rgba(255,255,255,0.85);
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .p2-ability-pill:hover {
+    background: rgba(0,180,255,0.15);
+    border-color: rgba(0,180,255,0.4);
+  }
+  .p2-ability-pill .pill-icon { font-size: 1.1rem; }
+
+  /* トレーニングポイント 番号付きカード */
+  .p2-train-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .p2-train-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 20px 18px;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+  .p2-train-card:hover {
+    background: rgba(0,180,255,0.06);
+    border-color: rgba(77,208,225,0.25);
+    transform: translateY(-2px);
+  }
+  .p2-train-num {
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, #4dd0e1, #0077aa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+  .p2-train-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 6px;
+  }
+  .p2-train-desc {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.65;
+  }
+
+  /* 活用法 タイムライン */
+  .p2-tips-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .p2-tip-item {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 16px;
+    align-items: start;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .p2-tip-item:last-child { border-bottom: none; }
+  .p2-tip-dot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(0,180,255,0.12);
+    border: 1.5px solid rgba(77,208,225,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .p2-tip-text strong {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 3px;
+  }
+  .p2-tip-text span {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>CMJ 個票の見方ガイド</h1>
+  <p>個票の各項目をタップ・クリックして詳しい説明を確認できます</p>
+</div>
+
+<div class="hint-bar">👆 個票の項目をクリックすると右に説明が表示されます</div>
+
+<div class="container">
+
+  <!-- ===== 個票プレビュー ===== -->
+  <div class="票-wrapper">
+
+    <div class="票-header">
+      <div class="big">跳躍能力　測定結果</div>
+      <div class="sub">Counter Movement Jump</div>
+      <div class="small">大阪体育大学スポーツ科学センター　測定評価・S&amp;C部門</div>
+    </div>
+
+    <div class="票-name-row">
+      <span class="name">体大太郎（スポーツ科学センター）</span>
+      <span>2026年06月05日</span>
+    </div>
+
+    <div class="票-metrics">
+      <div class="metric-cell" id="cell-jump" onclick="show('jump')">
+        <div class="label">あなたのデータ</div>
+        <div class="unit">跳躍高 [cm]</div>
+        <div class="value">78.5</div>
+        <div class="avg-label">部平均</div>
+        <div class="avg-val">78.5 cm</div>
+      </div>
+      <div class="metric-cell" id="cell-flight" onclick="show('flight')">
+        <div class="label">あなたのデータ</div>
+        <div class="unit">滞空時間 [秒]</div>
+        <div class="value">0.8</div>
+        <div class="avg-label">部平均</div>
+        <div class="avg-val">0.800 秒</div>
+      </div>
+    </div>
+
+    <div class="票-badges">
+      <div class="badge-cell rank" id="cell-rank" onclick="show('rank')">
+        <div class="b-label">部内順位</div>
+        <div class="b-val">1 / 1 位</div>
+      </div>
+      <div class="badge-cell eval" id="cell-eval" onclick="show('eval')">
+        <div class="b-label">評価</div>
+        <div class="b-val">1（低い）</div>
+      </div>
+      <div class="badge-cell hensa" id="cell-hensa" onclick="show('hensa')">
+        <div class="b-label">偏差値</div>
+        <div class="b-val">−</div>
+      </div>
+    </div>
+
+    <div class="票-chart" id="cell-chart" onclick="show('chart')">
+      <div class="chart-title">スポーツ科学センター　部員比較（滞空時間 × 跳躍高）</div>
+      <div class="chart-canvas-wrapper">
+        <svg viewBox="0 0 260 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- 軸 -->
+          <line x1="36" y1="8" x2="36" y2="108" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="36" y1="108" x2="256" y2="108" stroke="#ccc" stroke-width="1.5"/>
+          <!-- グリッド横 -->
+          <line x1="36" y1="83" x2="256" y2="83" stroke="#eee" stroke-width="1"/>
+          <line x1="36" y1="58" x2="256" y2="58" stroke="#eee" stroke-width="1"/>
+          <line x1="36" y1="33" x2="256" y2="33" stroke="#eee" stroke-width="1"/>
+          <!-- Y軸ラベル -->
+          <text x="30" y="112" text-anchor="end" font-size="9" fill="#888">0</text>
+          <text x="30" y="87" text-anchor="end" font-size="9" fill="#888">20</text>
+          <text x="30" y="62" text-anchor="end" font-size="9" fill="#888">40</text>
+          <text x="30" y="37" text-anchor="end" font-size="9" fill="#888">60</text>
+          <text x="30" y="12" text-anchor="end" font-size="9" fill="#888">80</text>
+          <!-- X軸ラベル -->
+          <text x="36" y="120" text-anchor="middle" font-size="9" fill="#888">0.0</text>
+          <text x="96" y="120" text-anchor="middle" font-size="9" fill="#888">0.2</text>
+          <text x="156" y="120" text-anchor="middle" font-size="9" fill="#888">0.4</text>
+          <text x="216" y="120" text-anchor="middle" font-size="9" fill="#888">0.6</text>
+          <text x="256" y="120" text-anchor="middle" font-size="9" fill="#888">0.8</text>
+          <!-- 軸タイトル -->
+          <text x="146" y="129" text-anchor="middle" font-size="8" fill="#888">滞空時間 [s]</text>
+          <text x="10" y="60" text-anchor="middle" font-size="8" fill="#888" transform="rotate(-90,10,60)">跳躍高 [cm]</text>
+          <!-- データ点（体大太郎: 0.8s, 78.5cm → x=256, y≒11） -->
+          <rect x="249" y="8" width="8" height="8" fill="#26a0c4"/>
+          <!-- 凡例 -->
+          <rect x="80" y="115" width="8" height="8" fill="#26a0c4"/>
+          <text x="91" y="122" font-size="8" fill="#888">他部員</text>
+        </svg>
+      </div>
+    </div>
+
+  </div><!-- /票-wrapper -->
+
+  <!-- ===== 解説パネル ===== -->
+  <div class="explain-panel">
+
+    <!-- デフォルト表示 -->
+    <div class="explain-intro" id="explain-default">
+      <strong>👈 左の個票をクリック</strong>してください。<br>
+      各項目の意味と見方を詳しく解説します。<br><br>
+      <strong>項目一覧：</strong>
+      <ul style="margin-top:8px; padding-left:18px; line-height:2">
+        <li>跳躍高 [cm]</li>
+        <li>滞空時間 [秒]</li>
+        <li>部内順位</li>
+        <li>評価（1〜5）</li>
+        <li>偏差値</li>
+        <li>散布図（部員比較グラフ）</li>
+      </ul>
+    </div>
+
+    <!-- 跳躍高 -->
+    <div class="explain-content hidden" id="explain-jump">
+      <span class="explain-tag">跳躍高</span>
+      <h2>跳躍高 [cm]</h2>
+      <div class="big-num">78.5 <span>cm</span></div>
+      <p>ジャンプでどれだけ高く跳び上がれたかを示す値です。<br>
+      <strong>滞空時間から計算</strong>されます：</p>
+      <p style="background:#f5f5f5; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:0.85rem;">
+        跳躍高 = g × (滞空時間 / 2)² / 2<br>
+        ＝ 9.8 × (0.8 / 2)² / 2 ≒ 78.4 cm
+      </p>
+      <p>重力加速度（9.8 m/s²）と滞空時間を使って理論的に算出されるため、<strong>フォースプレートが不要</strong>で、Optojumpのような光電管センサーでも測定できます。</p>
+      <div class="tip">
+        <strong>見方のポイント：</strong>値が大きいほど跳躍力が高い。
+        一般的な大学生男子は 30〜40 cm 前後、アスリートは 40〜60 cm 以上が目安です。
+      </div>
+    </div>
+
+    <!-- 滞空時間 -->
+    <div class="explain-content hidden" id="explain-flight">
+      <span class="explain-tag">滞空時間</span>
+      <h2>滞空時間 [秒]</h2>
+      <div class="big-num">0.800 <span>秒</span></div>
+      <p>足が地面を離れてから着地するまでの<strong>空中にいる時間</strong>です。</p>
+      <p>Optojump や Ex-Jumper は赤外線センサーで、足が光を遮っていない時間を計測しています。<br>
+      この時間が長いほど、高く跳んでいることを意味します。</p>
+      <p><strong>跳躍高と一対一で対応</strong>するため、グラフでX軸（横軸）として使われています。</p>
+      <div class="tip">
+        <strong>測定上の注意：</strong>足首が伸びた状態で着地すると滞空時間が短く計測されることがあります。
+        着地時は足全体でしっかり踏む練習をすると、より正確な値が出ます。
+      </div>
+    </div>
+
+    <!-- 部内順位 -->
+    <div class="explain-content hidden" id="explain-rank">
+      <span class="explain-tag">部内順位</span>
+      <h2>部内順位</h2>
+      <div class="big-num" style="color:#fff; -webkit-text-stroke:1px #0d9de8; text-stroke:1px #0d9de8; color:#0d2137;">1 / 1 位</div>
+      <p>同じ部活・同じ性別の中での<strong>跳躍高ランキング</strong>です。</p>
+      <p>「1 / 1 位」は「1人中1位」を意味します。このサンプルデータは1人のみのため参考値です。<br>
+      部員が多いほど順位の意味が大きくなります。</p>
+      <div class="tip">
+        <strong>見方のポイント：</strong>順位は測定のたびに更新されます。前回より順位が上がっていればトレーニングの成果が出ているサインです。
+      </div>
+    </div>
+
+    <!-- 評価 -->
+    <div class="explain-content hidden" id="explain-eval">
+      <span class="explain-tag">評価（グレード）</span>
+      <h2>評価（1〜5）</h2>
+      <p>チーム内での相対的な位置を<strong>1〜5の5段階</strong>で示します。偏差値をもとに算出されます。</p>
+      <table class="grade-table">
+        <tr><th>評価</th><th>偏差値の範囲</th><th>チーム内の位置</th></tr>
+        <tr><td class="grade-5">5</td><td>60 以上</td><td>上位 約16%</td></tr>
+        <tr><td class="grade-4">4</td><td>50 〜 60</td><td>平均より高い</td></tr>
+        <tr><td class="grade-3">3</td><td>40 〜 50</td><td>平均前後</td></tr>
+        <tr><td class="grade-2">2</td><td>30 〜 40</td><td>平均より低い</td></tr>
+        <tr><td class="grade-1">1</td><td>30 未満</td><td>下位 約16%</td></tr>
+      </table>
+      <div class="tip">
+        <strong>注意：</strong>評価は<strong>チーム内の相対評価</strong>です。チームのレベルによって同じ跳躍高でも評価が変わります。
+        絶対的な能力を見たいときは跳躍高の実数値を参照してください。
+      </div>
+    </div>
+
+    <!-- 偏差値 -->
+    <div class="explain-content hidden" id="explain-hensa">
+      <span class="explain-tag">偏差値</span>
+      <h2>偏差値</h2>
+      <div class="big-num" style="color:#aaa; font-size:2rem;">−（計算不可）</div>
+      <p>偏差値は<strong>チーム全体のデータ</strong>をもとに計算されます。</p>
+      <p style="background:#f5f5f5; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:0.85rem;">
+        偏差値 = 50 + 10 × (自分の値 − チーム平均) / チームSD
+      </p>
+      <p>このサンプルは1名のみのため「−」と表示されています。<br>
+      <strong>部員が2名以上いると計算が始まり</strong>、平均50・SD10で標準化されます。</p>
+      <ul>
+        <li>偏差値 <strong>50</strong> = チームのちょうど平均</li>
+        <li>偏差値 <strong>60以上</strong> = 上位約16%（評価5）</li>
+        <li>偏差値 <strong>30未満</strong> = 下位約16%（評価1）</li>
+      </ul>
+      <div class="tip">
+        <strong>見方のポイント：</strong>チームの人数が少ないと偏差値は不安定です。
+        10名以上いると信頼性が上がります。
+      </div>
+    </div>
+
+    <!-- 散布図 -->
+    <div class="explain-content hidden" id="explain-chart">
+      <span class="explain-tag">散布図</span>
+      <h2>部員比較グラフ（散布図）</h2>
+      <p>チーム全員のデータを<strong>1つの図</strong>にまとめたものです。</p>
+      <ul>
+        <li><strong>横軸（X軸）</strong>：滞空時間 [s] ← 右に行くほど長い</li>
+        <li><strong>縦軸（Y軸）</strong>：跳躍高 [cm] ← 上に行くほど高い</li>
+        <li><strong>■（青い四角）</strong>：他の部員のデータ点</li>
+      </ul>
+      <p>右上に点があるほど跳躍力が高い選手です。自分の点がどこにあるかで、<strong>チーム内での位置</strong>が一目でわかります。</p>
+      <div class="tip">
+        <strong>理論上の関係：</strong>跳躍高と滞空時間は完全に比例関係にあるため、点はほぼ一直線に並びます。
+        大きくズレている点があれば、測定ミスの可能性があります。
+      </div>
+    </div>
+
+  </div><!-- /explain-panel -->
+
+  <!-- ===== 2ページ目解説（スタイリッシュ版） ===== -->
+  <div class="page2-panel" id="page2">
+
+    <!-- ヒーロー -->
+    <div class="p2-hero">
+      <div class="p2-hero-grid"></div>
+      <div class="p2-hero-eyebrow">Page 2 — Athlete &amp; Coach Guide</div>
+      <h2>CMJ 測定について<br><em>Counter Movement Jump</em></h2>
+      <p>大阪体育大学スポーツ科学センター　測定評価・S&amp;C部門</p>
+    </div>
+
+    <div class="p2-sections">
+
+      <!-- Section 1: CMJとは -->
+      <div class="p2-section">
+        <div class="p2-section-label">
+          <div class="s-icon" style="background:rgba(0,180,255,0.12);">🏃</div>
+          <div>
+            <div class="s-title">Section 01</div>
+            <div class="s-heading">CMJ（カウンタームーブメントジャンプ）とは？</div>
+          </div>
+        </div>
+        <div class="s-divider"></div>
+        <div class="p2-what-card">
+          <div class="p2-what-icon">⚡</div>
+          <p>
+            直立した状態から素早く膝を曲げ、<strong>その反動を使って最大限に跳び上がるジャンプ</strong>です。<br>
+            「しゃがんでから跳ぶ」動作で、日常のスポーツ動作に最も近い形で脚の能力を測定できます。<br>
+            足が地面を離れてから着地するまでの<strong>滞空時間</strong>をもとに跳躍高を算出します。
+          </p>
+        </div>
+      </div>
+
+      <!-- Section 2: 跳躍高が示す能力 -->
+      <div class="p2-section" style="margin-top:36px;">
+        <div class="p2-section-label">
+          <div class="s-icon" style="background:rgba(0,230,180,0.1);">📊</div>
+          <div>
+            <div class="s-title">Section 02</div>
+            <div class="s-heading">跳躍高が示す能力</div>
+          </div>
+        </div>
+        <div class="s-divider"></div>
+        <p style="color:rgba(255,255,255,0.55); font-size:0.85rem; margin-bottom:16px; line-height:1.7;">
+          跳躍高は「<strong style="color:#4dd0e1;">下肢の爆発的なパワー（瞬発力）</strong>」を示す指標です。以下のパフォーマンスと高い相関があることが多くの研究で示されています。
+        </p>
+        <div class="p2-ability-row">
+          <div class="p2-ability-pill"><span class="pill-icon">🏃</span> 短距離スタートダッシュ</div>
+          <div class="p2-ability-pill"><span class="pill-icon">🤸</span> 踏み切り力（跳躍競技・体操）</div>
+          <div class="p2-ability-pill"><span class="pill-icon">⚽</span> 方向転換の素早さ（球技全般）</div>
+        </div>
+      </div>
+
+      <!-- Section 3: 跳躍力を高めるポイント -->
+      <div class="p2-section" style="margin-top:36px;">
+        <div class="p2-section-label">
+          <div class="s-icon" style="background:rgba(255,180,0,0.1);">💪</div>
+          <div>
+            <div class="s-title">Section 03</div>
+            <div class="s-heading">跳躍力を高めるためのポイント</div>
+          </div>
+        </div>
+        <div class="s-divider"></div>
+        <div class="p2-train-grid">
+          <div class="p2-train-card">
+            <div class="p2-train-num">01</div>
+            <div class="p2-train-title">筋力トレーニング</div>
+            <div class="p2-train-desc">スクワット・デッドリフトなどで下肢の基礎筋力を強化する</div>
+          </div>
+          <div class="p2-train-card">
+            <div class="p2-train-num">02</div>
+            <div class="p2-train-title">プライオメトリクス</div>
+            <div class="p2-train-desc">ジャンプ動作を繰り返し爆発的な力の出し方を習得する</div>
+          </div>
+          <div class="p2-train-card">
+            <div class="p2-train-num">03</div>
+            <div class="p2-train-title">十分な休養</div>
+            <div class="p2-train-desc">疲労状態では数値が低下。測定前日は激しい運動を避け十分な睡眠をとる</div>
+          </div>
+          <div class="p2-train-card">
+            <div class="p2-train-num">04</div>
+            <div class="p2-train-title">体組成の管理</div>
+            <div class="p2-train-desc">体重に対する筋力の比率を意識する（軽くて強い体が有利）</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: 測定値の活用法 -->
+      <div class="p2-section" style="margin-top:36px;">
+        <div class="p2-section-label">
+          <div class="s-icon" style="background:rgba(180,100,255,0.1);">📈</div>
+          <div>
+            <div class="s-title">Section 04</div>
+            <div class="s-heading">測定値の活用法</div>
+          </div>
+        </div>
+        <div class="s-divider"></div>
+        <div class="p2-tips-list">
+          <div class="p2-tip-item">
+            <div class="p2-tip-dot">✔</div>
+            <div class="p2-tip-text">
+              <strong>継続的に測定する</strong>
+              <span>1回の結果より「変化の傾向」が重要。定期的に測定することでトレーニングの効果を客観的に追えます。</span>
+            </div>
+          </div>
+          <div class="p2-tip-item">
+            <div class="p2-tip-dot">📅</div>
+            <div class="p2-tip-text">
+              <strong>体調・季節変動を考慮する</strong>
+              <span>疲労・体調・季節によって数値は変動します。単回の結果だけで判断せず、複数回のデータを見てください。</span>
+            </div>
+          </div>
+          <div class="p2-tip-item">
+            <div class="p2-tip-dot">🎯</div>
+            <div class="p2-tip-text">
+              <strong>評価 4・5 を目標に</strong>
+              <span>評価が 3 以下の選手は、筋力系トレーニングを優先的に取り入れることを検討してください。</span>
+            </div>
+          </div>
+          <div class="p2-tip-item">
+            <div class="p2-tip-dot">👥</div>
+            <div class="p2-tip-text">
+              <strong>指導者向け：総合的な解釈を</strong>
+              <span>評価だけでなく、トレーニングの質・量・回復状態と合わせて解釈することを推奨します。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /p2-sections -->
+  </div><!-- /page2-panel -->
+
+</div><!-- /container -->
+
+<div class="page2-btn-wrap">
+  <button class="page2-btn" id="p2btn" onclick="togglePage2()">
+    <span>📄 個票 2ページ目の解説</span>
+    <span class="btn-arrow">▼</span>
+  </button>
+</div>
+
+<div style="text-align:center; padding: 8px 16px 24px; font-size:0.75rem; color:#aaa;">
+  大阪体育大学スポーツ科学センター 測定評価・S&amp;C部門
+</div>
+
+<script>
+const sections = ['jump','flight','rank','eval','hensa','chart'];
+const cellMap = {
+  jump: 'cell-jump', flight: 'cell-flight',
+  rank: 'cell-rank', eval: 'cell-eval',
+  hensa: 'cell-hensa', chart: 'cell-chart'
+};
+
+function show(key) {
+  // デフォルト非表示
+  document.getElementById('explain-default').style.display = 'none';
+
+  // 全解説を隠す
+  sections.forEach(s => {
+    document.getElementById('explain-' + s).classList.add('hidden');
+  });
+
+  // 全セルのアクティブ解除
+  Object.values(cellMap).forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+
+  // 対象を表示
+  document.getElementById('explain-' + key).classList.remove('hidden');
+  document.getElementById(cellMap[key]).classList.add('active');
+}
+
+function togglePage2() {
+  const p = document.getElementById('page2');
+  const btn = document.getElementById('p2btn');
+  p.classList.toggle('open');
+  btn.classList.toggle('open');
+  if (p.classList.contains('open')) {
+    setTimeout(() => p.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+}
+</script>
+</body>
+</html>
