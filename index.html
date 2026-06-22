@@ -14,6 +14,22 @@
     min-height: 100vh;
   }
 
+  /* ===== SITE NAV ===== */
+  .site-nav {
+    background: #0a1929;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 36px;
+    font-size: 0.75rem;
+  }
+  .site-nav-brand { color: #4dd0e1; font-weight: 700; letter-spacing: 0.05em; }
+  .site-nav-links { display: flex; gap: 16px; }
+  .site-nav-link { color: rgba(255,255,255,0.65); text-decoration: none; }
+  .site-nav-link:hover { color: white; }
+  .site-nav-link.active { color: white; font-weight: 600; border-bottom: 2px solid #4dd0e1; padding-bottom: 2px; }
+
   /* ===== HEADER ===== */
   .app-header {
     background: linear-gradient(135deg, #0d2137 0%, #1a4a6b 100%);
@@ -517,6 +533,14 @@
 </style>
 </head>
 <body>
+
+<nav class="site-nav">
+  <span class="site-nav-brand">SSC Guide</span>
+  <div class="site-nav-links">
+    <a href="https://hamaaloha.github.io/cmj-instruction/" class="site-nav-link">CMJ 実施方法</a>
+    <a href="https://hamaaloha.github.io/ssc_guide/" class="site-nav-link active">個票の見方</a>
+  </div>
+</nav>
 
 <div class="app-header">
   <h1>CMJ 個票の見方ガイド</h1>
